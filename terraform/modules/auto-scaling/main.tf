@@ -46,11 +46,10 @@ resource "aws_autoscaling_group" "web" {
   }
 }
 
-resource "aws_lb" "web" {
+resource "aws_lb" "web-nlb" {
   name               = "${var.prj_name}-web-alb"
   internal           = false
-  load_balancer_type = "application"
-  security_groups    = [var.public_sg_id] 
+  load_balancer_type = "network"
   subnets            = var.public_subnet_ids 
 
   tags = {
@@ -58,21 +57,29 @@ resource "aws_lb" "web" {
   }
 }
 
-resource "aws_lb_target_group" "web" {
+resource "aws_lb" "web-nlb-internal" {
+  name               = "${var.prj_name}-web-alb-internal"
+  internal           = true
+  load_balancer_type = "network"
+  subnets            = var.private_subnet_ids 
+
+  tags = {
+    Name = "${var.prj_name}-web-alb-internal"
+  }
+}
+resource "aws_lb_target_group" "web-nlb" {
   # https://thaim.hatenablog.jp/entry/2021/01/11/004738
-  name     = "${var.prj_name}-web-tgtgrp-${substr(uuid(), 0, 6)}"
-  port     = 80
-  protocol = "HTTP"
+  name     = "${var.prj_name}-w-tgtgrp-${substr(uuid(), 0, 6)}"
+  port     = 8080
+  protocol = "TCP"
   vpc_id   = var.vpc_id
   
   health_check {
     interval            = 30
-    path                = "/index.html"
-    port                = 80
-    protocol            = "HTTP"
-    timeout             = 5
-    unhealthy_threshold = 2
-    matcher             = 200
+    port                = "traffic-port"
+    protocol            = "TCP"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
   } 
 
   lifecycle {
@@ -81,18 +88,68 @@ resource "aws_lb_target_group" "web" {
   }
 }
 
+resource "aws_lb_target_group" "web-nlb-internal" {
+  # https://thaim.hatenablog.jp/entry/2021/01/11/004738
+  name     = "${var.prj_name}-w-in-tgtgrp-${substr(uuid(), 0, 6)}"
+  port     = 8080
+  protocol = "TCP"
+  vpc_id   = var.vpc_id
+  
+  health_check {
+    interval            = 30
+    port                = "traffic-port"
+    protocol            = "TCP"
+    healthy_threshold   = 3
+    unhealthy_threshold = 3
+  } 
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes = [name]
+  }
+
+  tags = {
+    Name = "foobar"
+  }
+}
 resource "aws_lb_listener" "web" {
-  load_balancer_arn = aws_lb.web.arn
+  load_balancer_arn = aws_lb.web-nlb.arn
   port              = "80"
-  protocol          = "HTTP"
+  protocol          = "TCP"
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.web.arn
+    target_group_arn = aws_lb_target_group.web-nlb.arn
   }
 }
 
+resource "aws_lb_listener" "web2" {
+  load_balancer_arn = aws_lb.web-nlb.arn
+  port              = "30080"
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web-nlb.arn
+  }
+}
+
+resource "aws_lb_listener" "web-internal" {
+  load_balancer_arn = aws_lb.web-nlb-internal.arn
+  port              = "30080"
+  protocol          = "TCP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web-nlb-internal.arn
+  }
+}
 resource "aws_autoscaling_attachment" "asg_attachment" {
   autoscaling_group_name = aws_autoscaling_group.web.id
-  alb_target_group_arn   = aws_lb_target_group.web.arn
+  alb_target_group_arn   = aws_lb_target_group.web-nlb.arn
+}
+
+resource "aws_autoscaling_attachment" "asg_attachment-internal" {
+  autoscaling_group_name = aws_autoscaling_group.web.id
+  alb_target_group_arn   = aws_lb_target_group.web-nlb-internal.arn
 }
