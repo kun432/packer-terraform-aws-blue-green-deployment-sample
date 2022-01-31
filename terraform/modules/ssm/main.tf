@@ -109,3 +109,8 @@ resource "aws_iam_instance_profile" "ssm_instance_profile" {
 output ssm_instance_profile {
   value = aws_iam_instance_profile.ssm_instance_profile.name
 }
+
+resource "aws_iam_role_policy_attachment" "ssm_role_attach_cloudwatchagent" {
+  role       = aws_iam_role.ssm_role.name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy"
+}
