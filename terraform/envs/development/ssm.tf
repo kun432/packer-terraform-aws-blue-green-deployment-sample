@@ -1,3 +1,29 @@
+resource "aws_ssm_parameter" "cwa_config_web" {
+  name  = "AmazonCloudWatch-config-web"
+  type  = "String"
+  value = <<EOS
+{
+    "metrics": {
+        "metrics_collected": {
+            "procstat": [
+                {
+                    "exe": "httpd",
+                    "measurement": [
+                        "pid_count"
+                    ],
+                    "metrics_collection_interval": 60
+                }
+            ]
+        }
+    }
+}
+EOS  
+}
+
+resource "aws_ssm_parameter" "cwa_config_linux" {
+  name  = "AmazonCloudWatch-config-linux"
+  type  = "String"
+  value = <<EOS
 {
     "agent": {
         "metrics_collection_interval": 60,
@@ -5,11 +31,16 @@
     },
     "metrics": {
         "append_dimensions": {
-            "AutoScalingGroupName": "${aws:AutoScalingGroupName}",
-            "ImageId": "${aws:ImageId}",
-            "InstanceId": "${aws:InstanceId}",
-            "InstanceType": "${aws:InstanceType}"
+            "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
+            "ImageId": "$${aws:ImageId}",
+            "InstanceId": "$${aws:InstanceId}",
+            "InstanceType": "$${aws:InstanceType}"
         },
+        "aggregation_dimensions": [
+            [
+                "AutoScalingGroupName", "path"
+            ]
+        ],
         "metrics_collected": {
             "collectd": {
                 "metrics_aggregation_interval": 60
@@ -73,16 +104,9 @@
                     "swap_used_percent"
                 ],
                 "metrics_collection_interval": 60
-            },
-            "procstat": [
-                {
-                    "exe": "httpd",
-                    "measurement": [
-                        "pid_count"
-                    ],
-                    "metrics_collection_interval": 60
-                }
-            ]
+            }
         }
     }
+}
+EOS  
 }

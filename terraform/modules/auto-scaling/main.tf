@@ -8,6 +8,13 @@ variable "private_sg_id" {}
 variable "public_subnet_ids" {}
 variable "private_subnet_ids" {}
 
+data "template_file" "web_user_data" {
+  template = <<-EOF
+    #!/bin/bash
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:AmazonCloudWatch-config-linux
+    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a append-config -m ec2 -s -c ssm:AmazonCloudWatch-config-web
+  EOF
+}
 resource "aws_launch_template" "web" {
   name                   = "${var.prj_name}-web-launch-template"
   image_id               = var.ami_id
@@ -18,6 +25,9 @@ resource "aws_launch_template" "web" {
   iam_instance_profile {
     name = var.instance_profile
   }
+
+
+  user_data = "${base64encode(data.template_file.web_user_data.rendered)}"
 }
 
 resource "aws_autoscaling_group" "web" {
@@ -29,6 +39,16 @@ resource "aws_autoscaling_group" "web" {
   health_check_type         = "ELB"
   vpc_zone_identifier       = var.private_subnet_ids
 
+  enabled_metrics = [
+    "GroupMaxSize",
+    "GroupMinSize",
+    "GroupDesiredCapacity",
+    "GroupInServiceInstances",
+    "GroupPendingInstances",
+    "GroupStandbyInstances",
+    "GroupTerminatingInstances",
+    "GroupTotalInstances"
+  ] 
   launch_template {
     id      = aws_launch_template.web.id
     version = "$Latest"
