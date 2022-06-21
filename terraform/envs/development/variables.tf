@@ -25,3 +25,10 @@ variable "web_ami_id" {
 variable "web_instance_type" {
   default = "t2.micro"
 }
+
+variable "mail_alert_critical" {
+  default = "alert-critical@example.com"
+}
+variable "mail_alert_warning" {
+  default = "alert-warning@example.com"
+}

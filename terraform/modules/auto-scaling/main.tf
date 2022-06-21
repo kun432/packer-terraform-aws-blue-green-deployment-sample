@@ -173,3 +173,14 @@ resource "aws_autoscaling_attachment" "asg_attachment-internal" {
   autoscaling_group_name = aws_autoscaling_group.web.id
   alb_target_group_arn   = aws_lb_target_group.web-nlb-internal.arn
 }
+
+output target_group_web_nlb_suffix {
+  value = aws_lb_target_group.web-nlb.arn_suffix
+}
+output nlb_web_nlb_suffix {
+  value = aws_lb.web-nlb.arn_suffix
+}
+
+output auto_scaling_group_web {
+  value = aws_autoscaling_group.web.name
+}
