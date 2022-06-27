@@ -25,7 +25,7 @@ resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_healthy_host_count"
   period                    = 60
   evaluation_periods        = 1
   datapoints_to_alarm       = 1
-  threshold                 = 1
+  threshold                 = 2
   comparison_operator       = "LessThanThreshold"
   statistic                 = "Minimum"
   alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
