@@ -26,6 +26,9 @@ resource "aws_launch_template" "web" {
     name = var.instance_profile
   }
 
+  monitoring {
+    enabled = true
+  }
 
   user_data = "${base64encode(data.template_file.web_user_data.rendered)}"
 }

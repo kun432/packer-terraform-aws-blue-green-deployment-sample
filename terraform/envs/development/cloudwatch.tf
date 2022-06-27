@@ -1,13 +1,14 @@
 resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_unhealthy_host_count" {
   alarm_name                = "target_group_web_nlb_unhealthy_host_count"
-  comparison_operator       = "GreaterThanThreshold"
-  evaluation_periods        = "1"
-  metric_name               = "UnHealthyHostCount"
-  namespace                 = "AWS/NetworkELB"
-  period                    = "60"
-  statistic                 = "Maximum"
-  threshold                 = 0
   alarm_description         = "Number of unhealthy hosts in target group web-nlb"
+  namespace                 = "AWS/NetworkELB"
+  metric_name               = "UnHealthyHostCount"
+  period                    = 60
+  evaluation_periods        = 1
+  datapoints_to_alarm       = 1
+  threshold                 = 0
+  comparison_operator       = "GreaterThanThreshold"
+  statistic                 = "Maximum"
   alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   dimensions = {
@@ -18,14 +19,15 @@ resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_unhealthy_host_coun
 
 resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_healthy_host_count" {
   alarm_name                = "target_group_web_nlb_healthy_host_count"
-  comparison_operator       = "LessThanThreshold"
-  evaluation_periods        = "1"
-  metric_name               = "HealthyHostCount"
-  namespace                 = "AWS/NetworkELB"
-  period                    = "60"
-  statistic                 = "Minimum"
-  threshold                 = 2
   alarm_description         = "Number of healthy hosts in target group web-nlb"
+  namespace                 = "AWS/NetworkELB"
+  metric_name               = "HealthyHostCount"
+  period                    = 60
+  evaluation_periods        = 1
+  datapoints_to_alarm       = 1
+  threshold                 = 1
+  comparison_operator       = "LessThanThreshold"
+  statistic                 = "Minimum"
   alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   dimensions = {
@@ -34,17 +36,17 @@ resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_healthy_host_count"
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "EC2_metric_alarm" {
-  alarm_name          = "EC2-metric-alarm"
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  evaluation_periods  = "1"
-  metric_name         = "CPUUtilization"
+resource "aws_cloudwatch_metric_alarm" "asg_cpu_alarm" {
+  alarm_name          = "autostacling-group-cpu-utilization-alarm"
   namespace           = "AWS/EC2"
-  period              = "60"
-  statistic           = "Maximum"
+  metric_name         = "CPUUtilization"
+  period              = 60
+  evaluation_periods  = 3
+  datapoints_to_alarm = 2
   threshold           = 80
-  treat_missing_data = "notBreaching"
-  datapoints_to_alarm = 1
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  statistic           = "Average"
+  treat_missing_data  = "breaching"
   depends_on = [
     module.auto-scaling.auto_scaling_group_web,
   ]
@@ -52,7 +54,53 @@ resource "aws_cloudwatch_metric_alarm" "EC2_metric_alarm" {
     AutoScalingGroupName = module.auto-scaling.auto_scaling_group_web
   }
 
-  alarm_description = "This metric monitors ec2 cpu utilization"
+  alarm_description = "This metric monitors autoscaling group cpu utilization"
+  alarm_actions     = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+  ok_actions        = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "asg_system_status_alarm" {
+  alarm_name          = "autoscaling-group-system-status-check-alarm"
+  metric_name         = "StatusCheckFailed_System"
+  namespace           = "AWS/EC2"
+  period              = 60
+  datapoints_to_alarm = 1
+  evaluation_periods  = 1
+  threshold           = 0
+  comparison_operator = "GreaterThanThreshold"
+  statistic           = "Maximum"
+  treat_missing_data  = "breaching"
+  depends_on = [
+    module.auto-scaling.auto_scaling_group_web,
+  ]
+  dimensions = {
+    AutoScalingGroupName = module.auto-scaling.auto_scaling_group_web
+  }
+
+  alarm_description = "This metric monitors asg system status check"
+  alarm_actions     = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+  ok_actions        = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+}
+
+resource "aws_cloudwatch_metric_alarm" "asg_instance_status_alarm" {
+  alarm_name          = "autoscaling-group-instance-status-check-alarm"
+  namespace           = "AWS/EC2"
+  metric_name         = "StatusCheckFailed_Instance"
+  period              = 60
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+  threshold           = 0
+  statistic           = "Maximum"
+  comparison_operator = "GreaterThanThreshold"
+  treat_missing_data  = "breaching"
+  depends_on = [
+    module.auto-scaling.auto_scaling_group_web,
+  ]
+  dimensions = {
+    AutoScalingGroupName = module.auto-scaling.auto_scaling_group_web
+  }
+
+  alarm_description = "This metric monitors asg instance status check"
   alarm_actions     = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   ok_actions        = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
 }
