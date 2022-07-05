@@ -9,6 +9,7 @@ resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_unhealthy_host_coun
   threshold                 = 0
   comparison_operator       = "GreaterThanThreshold"
   statistic                 = "Maximum"
+  treat_missing_data        = "breaching"
   alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   dimensions = {
@@ -28,6 +29,7 @@ resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_healthy_host_count"
   threshold                 = 2
   comparison_operator       = "LessThanThreshold"
   statistic                 = "Minimum"
+  treat_missing_data        = "breaching"
   alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
   dimensions = {
@@ -40,12 +42,12 @@ resource "aws_cloudwatch_metric_alarm" "asg_cpu_alarm" {
   alarm_name          = "autostacling-group-cpu-utilization-alarm"
   namespace           = "AWS/EC2"
   metric_name         = "CPUUtilization"
-  period              = 60
-  evaluation_periods  = 3
-  datapoints_to_alarm = 2
+  period              = 300
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
   threshold           = 80
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  statistic           = "Average"
+  statistic           = "Maximum"
   treat_missing_data  = "breaching"
   depends_on = [
     module.auto-scaling.auto_scaling_group_web,

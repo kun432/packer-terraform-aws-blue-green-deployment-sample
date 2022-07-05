@@ -10,6 +10,9 @@ locals {
   prj_name = "${var.stage}-${var.project}"
 }
 
+variable "environ" {
+  default = "dev"
+}
 variable "region" {
   default = "ap-northeast-1"
 }

@@ -32,13 +32,12 @@ resource "aws_ssm_parameter" "cwa_config_linux" {
     "metrics": {
         "append_dimensions": {
             "AutoScalingGroupName": "$${aws:AutoScalingGroupName}",
-            "ImageId": "$${aws:ImageId}",
             "InstanceId": "$${aws:InstanceId}",
             "InstanceType": "$${aws:InstanceType}"
         },
         "aggregation_dimensions": [
             [
-                "AutoScalingGroupName", "path"
+                "AutoScalingGroupName"
             ]
         ],
         "metrics_collected": {
