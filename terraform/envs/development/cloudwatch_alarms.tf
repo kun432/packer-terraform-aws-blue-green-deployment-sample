@@ -1,3 +1,4 @@
+# alarms
 resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_unhealthy_host_count" {
   alarm_name                = "target_group_web_nlb_unhealthy_host_count"
   alarm_description         = "Number of unhealthy hosts in target group web-nlb"

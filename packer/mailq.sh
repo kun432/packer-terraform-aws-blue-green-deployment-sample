@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PLUGIN_NAME="postfix-queue"
+PLUGIN_NAME="postfix_queue"
 HOSTNAME="${COLLECTD_HOSTNAME:-localhost}"
 INTERVAL="${COLLECTD_INTERVAL:-60}"
 
