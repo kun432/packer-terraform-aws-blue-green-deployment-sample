@@ -27,7 +27,8 @@ resource "aws_ssm_parameter" "cwa_config_linux" {
 {
     "agent": {
         "metrics_collection_interval": 60,
-        "run_as_user": "root"
+        "run_as_user": "root",
+        "debug": true
     },
     "metrics": {
         "append_dimensions": {
@@ -36,12 +37,14 @@ resource "aws_ssm_parameter" "cwa_config_linux" {
             "InstanceType": "$${aws:InstanceType}"
         },
         "aggregation_dimensions": [
-            [
-                "AutoScalingGroupName"
-            ]
+            ["AutoScalingGroupName"],
+            ["AutoScalingGroupName","InstanceId"],
+            ["InstanceId"]
         ],
         "metrics_collected": {
             "collectd": {
+                "collectd_security_level":"encrypt",
+                "collectd_auth_file":"/etc/collectd.d/auth_file",
                 "metrics_aggregation_interval": 60
             },
             "cpu": {

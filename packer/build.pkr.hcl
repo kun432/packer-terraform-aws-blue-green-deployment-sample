@@ -15,6 +15,34 @@ build {
       "sudo systemctl enable collectd",
     ]
   }
+  provisioner "file" {
+    source = "collectdctl.conf"
+    destination = "/tmp/collectdctl.conf"
+  }
+  provisioner "file" {
+    source = "mailq.conf"
+    destination = "/tmp/mailq.conf"
+  }
+  provisioner "file" {
+    source = "mailq.sh"
+    destination = "/tmp/mailq.sh"
+  }
+  provisioner "file" {
+    source = "auth_file"
+    destination = "/tmp/auth_file"
+  }
+  provisioner "shell" {
+    inline = [
+      "sudo mv /tmp/collectdctl.conf /etc/collectd.d/.",
+      "sudo mv /tmp/mailq.conf /etc/collectd.d/.",
+      "sudo mv /tmp/auth_file /etc/collectd.d/.",
+      "sudo mv /tmp/mailq.sh /usr/lib64/collectd/.",
+      "sudo chmod 644 /etc/collectd.d/collectdctl.conf",
+      "sudo chmod 644 /etc/collectd.d/mailq.conf",
+      "sudo chmod 644 /etc/collectd.d/auth_file",
+      "sudo chmod 755 /usr/lib64/collectd/mailq.sh"
+    ]
+  }
   post-processor "amazon-ami-management" {
     regions = [var.region]
     identifier = local.prj_name
