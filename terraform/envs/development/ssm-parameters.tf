@@ -10,8 +10,7 @@ resource "aws_ssm_parameter" "cwa_config_web" {
                     "exe": "httpd",
                     "measurement": [
                         "pid_count"
-                    ],
-                    "metrics_collection_interval": 60
+                    ]
                 }
             ]
         }
@@ -21,14 +20,13 @@ EOS
 }
 
 resource "aws_ssm_parameter" "cwa_config_linux" {
-  name  = "AmazonCloudWatch-config-linux"
+  name  = "AmazonCloudWatch-config-common"
   type  = "String"
   value = <<EOS
 {
     "agent": {
-        "metrics_collection_interval": 60,
-        "run_as_user": "root",
-        "debug": true
+        "metrics_collection_interval": 300,
+        "run_as_user": "root"
     },
     "metrics": {
         "append_dimensions": {
@@ -49,63 +47,83 @@ resource "aws_ssm_parameter" "cwa_config_linux" {
             },
             "cpu": {
                 "measurement": [
-                    "cpu_usage_idle",
-                    "cpu_usage_iowait",
                     "cpu_usage_user",
-                    "cpu_usage_system"
+                    "cpu_usage_nice",
+                    "cpu_usage_system",
+                    "cpu_usage_iowait",
+                    "cpu_usage_irq",
+                    "cpu_usage_softirq",
+                    "cpu_usage_steal"
                 ],
-                "metrics_collection_interval": 60,
-                "resources": [
-                    "*"
-                ],
-                "totalcpu": false
-            },
-            "disk": {
-                "measurement": [
-                    "used_percent",
-                    "inodes_free"
-                ],
-                "metrics_collection_interval": 60,
                 "resources": [
                     "*"
                 ]
             },
+            "disk": {
+                "measurement": [
+                    "disk_free",
+                    "disk_inodes_free",
+                    "disk_inodes_total",
+                    "disk_inodes_used",
+                    "disk_total",
+                    "disk_used",
+                    "disk_used_percent"
+                ],
+                "resources": [
+                    "/",
+                    "/run"
+                ]
+            },
             "diskio": {
                 "measurement": [
-                    "io_time",
-                    "write_bytes",
-                    "read_bytes",
-                    "writes",
-                    "reads"
+                    "diskio_iops_in_progress",
+                    "diskio_io_time",
+                    "diskio_reads",
+                    "diskio_read_bytes",
+                    "diskio_read_time",
+                    "diskio_writes",
+                    "diskio_write_bytes",
+                    "diskio_write_time"
                 ],
-                "metrics_collection_interval": 60,
                 "resources": [
                     "*"
                 ]
             },
             "mem": {
                 "measurement": [
+                    "mem_active",
+                    "mem_available",
+                    "mem_available_percent",
+                    "mem_buffered",
+                    "mem_cached",
+                    "mem_free",
+                    "mem_inactive",
+                    "mem_total",
+                    "mem_used",
                     "mem_used_percent"
                 ],
-                "metrics_collection_interval": 60
+                "resources": [
+                    "*"
+                ]
             },
-            "netstat": {
+            "net": {
                 "measurement": [
-                    "tcp_established",
-                    "tcp_time_wait"
-                ],
-                "metrics_collection_interval": 60
-            },
-            "statsd": {
-                "metrics_aggregation_interval": 60,
-                "metrics_collection_interval": 10,
-                "service_address": ":8125"
-            },
-            "swap": {
-                "measurement": [
-                    "swap_used_percent"
-                ],
-                "metrics_collection_interval": 60
+                    "net_bytes_recv",
+                    "net_bytes_sent"
+                ]
+            }
+        }
+    },
+    "logs": {
+        "logs_collected": {
+            "files": {
+                "collect_list": [
+                    {
+                        "file_path": "/var/log/kern.log",
+                        "log_group_name": "kern_log",
+                        "log_stream_name": "{instanceId}"
+                    }
+                ]
             }
         }
     }

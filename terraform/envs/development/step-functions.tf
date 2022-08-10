@@ -62,6 +62,13 @@ data "aws_iam_policy_document" "eventbridge" {
     ]
     effect  = "Allow"
   }
+  statement {
+    actions = [
+      "ssm:SendCommand"
+    ]
+    resources = ["*"]
+    effect  = "Allow"
+  }
 }
 
 resource "aws_iam_policy" "eventbridge_stepfunctions_policy" {
@@ -179,7 +186,7 @@ resource aws_sfn_state_machine step-function-create-ec2-alarm-disk {
               "Value": "t2.micro"
             }
           ],
-          "Period": 60,
+          "Period": 300,
           "EvaluationPeriods": 1,
           "Threshold": 80,
           "DatapointsToAlarm": 1,
@@ -193,21 +200,21 @@ resource aws_sfn_state_machine step-function-create-ec2-alarm-disk {
   EOF
 }
 
-resource aws_sfn_state_machine step-function-create-ec2-alarm-mailq {
-  name     = "create-ec2-alarm-mailq"
+resource aws_sfn_state_machine step-function-create-ec2-alarm-postfix-queue {
+  name     = "create-ec2-alarm-postfiix-queue"
   role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
 
   definition = <<-EOF
   {
-    "Comment": "create-ec2-alarm-mailq",
+    "Comment": "create-ec2-alarm-postfix-queuue",
     "StartAt": "PutMetricAlarm",
     "States": {
       "PutMetricAlarm": {
         "Type": "Task",
         "End": true,
         "Parameters": {
-          "AlarmName.$": "States.Format('${var.environ}-WEB_MAIL_QUEUE-{}', $.detail.EC2InstanceId)",
-          "AlarmDescription.$": "States.Format('${var.environ}-WEB_MAIL_QUEUE-{}', $.detail.EC2InstanceId)",
+          "AlarmName.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
+          "AlarmDescription.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
           "AlarmActions": [
             "${aws_sns_topic.alarm_critical.arn}",
             "${aws_sns_topic.alarm_warning.arn}"
@@ -217,7 +224,7 @@ resource aws_sfn_state_machine step-function-create-ec2-alarm-mailq {
             "${aws_sns_topic.alarm_warning.arn}"
           ],
           "Namespace": "CWAgent",
-          "MetricName": "collectd_postfix_queue_value",
+          "MetricName": "collectd_check_postfix_queue_value",
           "Statistic": "Maximum",
           "Dimensions": [
             {
@@ -255,7 +262,7 @@ resource aws_sfn_state_machine step-function-delete-ec2-alarm-all {
           "Type": "Task",
           "End": true,
           "Parameters": {
-            "AlarmNames.$": "States.Array(States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_MAIL_QUEUE-{}', $.detail.EC2InstanceId))"
+            "AlarmNames.$": "States.Array(States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId))"
           },
           "Resource": "arn:aws:states:::aws-sdk:cloudwatch:deleteAlarms"
         }
@@ -285,9 +292,9 @@ resource aws_cloudwatch_event_target create-asg-alarm-disk {
   role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
 }
 
-resource aws_cloudwatch_event_target create-asg-alarm-mailq {
+resource aws_cloudwatch_event_target create-asg-alarm-postfix-queue {
   rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful.name
-  arn      = aws_sfn_state_machine.step-function-create-ec2-alarm-mailq.arn
+  arn      = aws_sfn_state_machine.step-function-create-ec2-alarm-postfix-queue.arn
   role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
 }
 

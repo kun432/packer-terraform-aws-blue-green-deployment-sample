@@ -35,4 +35,5 @@ module "auto-scaling" {
   private_sg_id      = module.security-groups.private_sg_id
   public_subnet_ids  = module.vpc.public_subnet_ids
   private_subnet_ids = module.vpc.private_subnet_ids
+  user_data          = var.web_user_data
 }
