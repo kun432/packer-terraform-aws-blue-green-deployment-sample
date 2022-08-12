@@ -19,6 +19,26 @@ resource "aws_ssm_parameter" "cwa_config_web" {
 EOS  
 }
 
+resource "aws_ssm_parameter" "cwa_config_mail" {
+  name  = "AmazonCloudWatch-config-mail"
+  type  = "String"
+  value = <<EOS
+{
+    "metrics": {
+        "metrics_collected": {
+            "procstat": [
+                {
+                    "exe": "/usr/libexec/postfix/master",
+                    "measurement": [
+                        "pid_count"
+                    ]
+                }
+            ]
+        }
+    }
+}
+EOS  
+}
 resource "aws_ssm_parameter" "cwa_config_linux" {
   name  = "AmazonCloudWatch-config-common"
   type  = "String"
