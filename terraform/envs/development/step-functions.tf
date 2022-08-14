@@ -88,285 +88,318 @@ resource "aws_iam_role_policy_attachment" "role_policy_attachment_eventbridge_st
 
 #----- alarm -----
 
-resource aws_sfn_state_machine step-function-create-ec2-alarm-cpu {
-  name     = "create-ec2-alarm-cpu"
+resource aws_sfn_state_machine step-function-create-ec2-alarms {
+  name     = "create-ec2-alarms"
   role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
 
   definition = <<-EOF
   {
-    "Comment": "create-ec2-alarm-cpu",
-    "StartAt": "PutMetricAlarm",
+    "Comment": "create-ec2-alarms",
+    "StartAt": "Parallel",
     "States": {
-      "PutMetricAlarm": {
-        "Type": "Task",
-        "End": true,
-        "Parameters": {
-          "AlarmName.$": "States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId)",
-          "AlarmDescription.$": "States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId)",
-          "AlarmActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "OkActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "Namespace": "AWS/EC2",
-          "MetricName": "CPUUtilization",
-          "Statistic": "Maximum",
-          "Dimensions": [
-            {
-              "Name": "InstanceId",
-              "Value.$": "$.detail.EC2InstanceId"
+      "Parallel": {
+        "Type": "Parallel",
+        "Branches": [
+          {
+            "StartAt": "PutMetricAlarm_CPU",
+            "States": {
+              "PutMetricAlarm_CPU": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "AWS/EC2",
+                  "MetricName": "CPUUtilization",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 80,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
             }
-          ],
-          "Period": 300,
-          "EvaluationPeriods": 1,
-          "Threshold": 80,
-          "DatapointsToAlarm": 1,
-          "ComparisonOperator": "GreaterThanOrEqualToThreshold",
-          "TreatMissingData": "breaching"
-        },
-        "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
-      }
-    }
-  }
-  EOF
-}
-
-resource aws_sfn_state_machine step-function-create-ec2-alarm-disk {
-  name     = "create-ec2-alarm-disk"
-  role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
-
-  definition = <<-EOF
-  {
-    "Comment": "create-ec2-alarm-disk",
-    "StartAt": "PutMetricAlarm",
-    "States": {
-      "PutMetricAlarm": {
-        "Type": "Task",
-        "End": true,
-        "Parameters": {
-          "AlarmName.$": "States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId)",
-          "AlarmDescription.$": "States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId)",
-          "AlarmActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "OkActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "Namespace": "CWAgent",
-          "MetricName": "disk_used_percent",
-          "Statistic": "Maximum",
-          "Dimensions": [
-            {
-              "Name": "InstanceId",
-              "Value.$": "$.detail.EC2InstanceId"
-            },
-            {
-              "Name": "AutoScalingGroupName",
-              "Value.$": "$.detail.AutoScalingGroupName"
-            },
-            {
-              "Name": "path",
-              "Value": "/"
-            },
-            {
-              "Name": "device",
-              "Value": "xvda1"
-            },
-            {
-              "Name": "fstype",
-              "Value": "xfs"
-            },
-            {
-              "Name": "InstanceType",
-              "Value": "t2.micro"
+          },
+          {
+            "StartAt": "PutMetricAlarm_DISK",
+            "States": {
+              "PutMetricAlarm_DISK": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "disk_used_percent",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    },
+                    {
+                      "Name": "path",
+                      "Value": "/"
+                    },
+                    {
+                      "Name": "device",
+                      "Value": "xvda1"
+                    },
+                    {
+                      "Name": "fstype",
+                      "Value": "xfs"
+                    },
+                    {
+                      "Name": "InstanceType",
+                      "Value": "t2.micro"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 80,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
             }
-          ],
-          "Period": 300,
-          "EvaluationPeriods": 1,
-          "Threshold": 80,
-          "DatapointsToAlarm": 1,
-          "ComparisonOperator": "GreaterThanOrEqualToThreshold",
-          "TreatMissingData": "breaching"
-        },
-        "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
-      }
-    }
-  }
-  EOF
-}
-
-resource aws_sfn_state_machine step-function-create-ec2-alarm-process-postfix {
-  name     = "create-ec2-alarm-process-postfix"
-  role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
-
-  definition = <<-EOF
-  {
-    "Comment": "create-ec2-alarm-process-postfix",
-    "StartAt": "PutMetricAlarm",
-    "States": {
-      "PutMetricAlarm": {
-        "Type": "Task",
-        "End": true,
-        "Parameters": {
-          "AlarmName.$": "States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
-          "AlarmDescription.$": "States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
-          "AlarmActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "OkActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "Namespace": "CWAgent",
-          "MetricName": "procstat_lookup_pid_count",
-          "Statistic": "Maximum",
-          "Dimensions": [
-            {
-              "Name": "InstanceId",
-              "Value.$": "$.detail.EC2InstanceId"
-            },
-            {
-              "Name": "InstanceType",
-              "Value": "t2.micro"
-            },
-            {
-              "Name": "AutoScalingGroupName",
-              "Value.$": "$.detail.AutoScalingGroupName"
-            },
-            {
-              "Name": "exe",
-              "Value": "/usr/libexec/postfix/master"
-            },
-            {
-              "Name": "pid_finder",
-              "Value": "native"
+          },
+          {
+            "StartAt": "PutMetricAlarm_PROC_POSTFIX",
+            "States": {
+              "PutMetricAlarm_PROC_POSTFIX": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "procstat_lookup_pid_count",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "InstanceType",
+                      "Value": "t2.micro"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    },
+                    {
+                      "Name": "exe",
+                      "Value": "/usr/libexec/postfix/master"
+                    },
+                    {
+                      "Name": "pid_finder",
+                      "Value": "native"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 1,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "LessThanThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
             }
-          ],
-          "Period": 300,
-          "EvaluationPeriods": 1,
-          "Threshold": 1,
-          "DatapointsToAlarm": 1,
-          "ComparisonOperator": "LessThanThreshold",
-          "TreatMissingData": "breaching"
-        },
-        "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
-      }
-    }
-  }
-  EOF
-}
-
-resource aws_sfn_state_machine step-function-create-ec2-alarm-process-httpd {
-  name     = "create-ec2-alarm-process-httpd"
-  role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
-
-  definition = <<-EOF
-  {
-    "Comment": "create-ec2-alarm-process-httpd",
-    "StartAt": "PutMetricAlarm",
-    "States": {
-      "PutMetricAlarm": {
-        "Type": "Task",
-        "End": true,
-        "Parameters": {
-          "AlarmName.$": "States.Format('${var.environ}-WEB_PROCESS_HTTPD-{}', $.detail.EC2InstanceId)",
-          "AlarmDescription.$": "States.Format('${var.environ}-WEB_PROCESS_HTTTPD-{}', $.detail.EC2InstanceId)",
-          "AlarmActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "OkActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "Namespace": "CWAgent",
-          "MetricName": "procstat_lookup_pid_count",
-          "Statistic": "Maximum",
-          "Dimensions": [
-            {
-              "Name": "InstanceId",
-              "Value.$": "$.detail.EC2InstanceId"
-            },
-            {
-              "Name": "InstanceType",
-              "Value": "t2.micro"
-            },
-            {
-              "Name": "AutoScalingGroupName",
-              "Value.$": "$.detail.AutoScalingGroupName"
-            },
-            {
-              "Name": "exe",
-              "Value": "httpd"
-            },
-            {
-              "Name": "pid_finder",
-              "Value": "native"
+          },
+          {
+            "StartAt": "PutMetricAlarm_PROC_HTTPD",
+            "States": {
+              "PutMetricAlarm_PROC_HTTPD": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-WEB_PROCESS_HTTPD-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_PROCESS_HTTTPD-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "procstat_lookup_pid_count",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "InstanceType",
+                      "Value": "t2.micro"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    },
+                    {
+                      "Name": "exe",
+                      "Value": "httpd"
+                    },
+                    {
+                      "Name": "pid_finder",
+                      "Value": "native"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 1,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "LessThanThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
             }
-          ],
-          "Period": 300,
-          "EvaluationPeriods": 1,
-          "Threshold": 1,
-          "DatapointsToAlarm": 1,
-          "ComparisonOperator": "LessThanThreshold",
-          "TreatMissingData": "breaching"
-        },
-        "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
-      }
-    }
-  }
-  EOF
-}
-resource aws_sfn_state_machine step-function-create-ec2-alarm-postfix-queue {
-  name     = "create-ec2-alarm-postfiix-queue"
-  role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
-
-  definition = <<-EOF
-  {
-    "Comment": "create-ec2-alarm-postfix-queuue",
-    "StartAt": "PutMetricAlarm",
-    "States": {
-      "PutMetricAlarm": {
-        "Type": "Task",
-        "End": true,
-        "Parameters": {
-          "AlarmName.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
-          "AlarmDescription.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
-          "AlarmActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "OkActions": [
-            "${aws_sns_topic.alarm_critical.arn}",
-            "${aws_sns_topic.alarm_warning.arn}"
-          ],
-          "Namespace": "CWAgent",
-          "MetricName": "collectd_check_postfix_queue_value",
-          "Statistic": "Maximum",
-          "Dimensions": [
-            {
-              "Name": "InstanceId",
-              "Value.$": "$.detail.EC2InstanceId"
-            },
-            {
-              "Name": "AutoScalingGroupName",
-              "Value.$": "$.detail.AutoScalingGroupName"
+          },
+          {
+            "StartAt": "PutMetricAlarm_POSTFIX_QUEUE",
+            "States": {
+              "PutMetricAlarm_POSTFIX_QUEUE": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "collectd_CHECK_POSTFIX_QUEUE_value",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 10,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
             }
-          ],
-          "Period": 300,
-          "EvaluationPeriods": 1,
-          "Threshold": 10,
-          "DatapointsToAlarm": 1,
-          "ComparisonOperator": "GreaterThanOrEqualToThreshold",
-          "TreatMissingData": "breaching"
-        },
-        "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+          },
+          {
+            "StartAt": "PutMetricAlarm_POSTFIX_QUEUE_ALL",
+            "States": {
+              "PutMetricAlarm_POSTFIX_QUEUE_ALL": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-ALL{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-ALL{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "collectd_CHECK_POSTFIX_QUEUE_value",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    },
+                    {
+                      "Name": "InstanceType",
+                      "Value": "t2.micro"
+                    },
+                    {
+                      "Name": "instance",
+                      "Value": "all"
+                    },
+                    {
+                      "Name": "type",
+                      "Value": "gauge"
+                    },
+                    {
+                      "Name": "type_instance",
+                      "Value": "queue_count"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 10,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
+            }
+          }
+        ],
+        "End": true
       }
     }
   }
@@ -385,7 +418,7 @@ resource aws_sfn_state_machine step-function-delete-ec2-alarm-all {
           "Type": "Task",
           "End": true,
           "Parameters": {
-            "AlarmNames.$": "States.Array(States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_HTTPD-{}', $.detail.EC2InstanceId))"
+            "AlarmNames.$": "States.Array(States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_POSTFIX-ALL{}', $.detail.EC2InstanceId),States.Format('${var.environ}-WEB_PROCESS_HTTPD-{}', $.detail.EC2InstanceId))"
           },
           "Resource": "arn:aws:states:::aws-sdk:cloudwatch:deleteAlarms"
         }
@@ -403,21 +436,9 @@ resource aws_cloudwatch_event_rule eb-asg-ec2-launch-successful {
   }
   EOF
 }
-resource aws_cloudwatch_event_target create-asg-alarm-cpu {
+resource aws_cloudwatch_event_target create-asg-alarms {
   rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful.name
-  arn      = aws_sfn_state_machine.step-function-create-ec2-alarm-cpu.arn
-  role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
-}
-
-resource aws_cloudwatch_event_target create-asg-alarm-disk {
-  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful.name
-  arn      = aws_sfn_state_machine.step-function-create-ec2-alarm-disk.arn
-  role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
-}
-
-resource aws_cloudwatch_event_target create-asg-alarm-postfix-queue {
-  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful.name
-  arn      = aws_sfn_state_machine.step-function-create-ec2-alarm-postfix-queue.arn
+  arn      = aws_sfn_state_machine.step-function-create-ec2-alarms.arn
   role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
 }
 
