@@ -21,25 +21,25 @@ resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_unhealthy_host_coun
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_healthy_host_count" {
-  alarm_name                = "target_group_web_nlb_healthy_host_count"
-  alarm_description         = "Number of healthy hosts in target group web-nlb"
-  namespace                 = "AWS/NetworkELB"
-  metric_name               = "HealthyHostCount"
-  period                    = 60
-  evaluation_periods        = 1
-  datapoints_to_alarm       = 1
-  threshold                 = 2
-  comparison_operator       = "LessThanThreshold"
-  statistic                 = "Minimum"
-  treat_missing_data        = "breaching"
-  alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
-  ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
-  dimensions = {
-    TargetGroup  = module.auto-scaling.target_group_web_nlb_suffix
-    LoadBalancer = module.auto-scaling.nlb_web_nlb_suffix
-  }
-}
+#resource "aws_cloudwatch_metric_alarm" "target_group_web_nlb_healthy_host_count" {
+#  alarm_name                = "target_group_web_nlb_healthy_host_count"
+#  alarm_description         = "Number of healthy hosts in target group web-nlb"
+#  namespace                 = "AWS/NetworkELB"
+#  metric_name               = "HealthyHostCount"
+#  period                    = 60
+#  evaluation_periods        = 1
+#  datapoints_to_alarm       = 1
+#  threshold                 = 2
+#  comparison_operator       = "LessThanThreshold"
+#  statistic                 = "Minimum"
+#  treat_missing_data        = "breaching"
+#  alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+#  ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+#  dimensions = {
+#    TargetGroup  = module.auto-scaling.target_group_web_nlb_suffix
+#    LoadBalancer = module.auto-scaling.nlb_web_nlb_suffix
+#  }
+#}
 
 resource "aws_cloudwatch_metric_alarm" "asg_web_system_status_alarm" {
   alarm_name          = "asg-web-system-status-check-alarm"
@@ -108,25 +108,25 @@ resource "aws_cloudwatch_metric_alarm" "target_group_mail_nlb_unhealthy_host_cou
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "target_group_mail_nlb_healthy_host_count" {
-  alarm_name                = "target_group_mail_nlb_healthy_host_count"
-  alarm_description         = "Number of healthy hosts in target group mail-nlb"
-  namespace                 = "AWS/NetworkELB"
-  metric_name               = "HealthyHostCount"
-  period                    = 60
-  evaluation_periods        = 1
-  datapoints_to_alarm       = 1
-  threshold                 = 2
-  comparison_operator       = "LessThanThreshold"
-  statistic                 = "Minimum"
-  treat_missing_data        = "breaching"
-  alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
-  ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
-  dimensions = {
-    TargetGroup  = module.auto-scaling2.target_group_web_nlb_suffix
-    LoadBalancer = module.auto-scaling2.nlb_web_nlb_suffix
-  }
-}
+#resource "aws_cloudwatch_metric_alarm" "target_group_mail_nlb_healthy_host_count" {
+#  alarm_name                = "target_group_mail_nlb_healthy_host_count"
+#  alarm_description         = "Number of healthy hosts in target group mail-nlb"
+#  namespace                 = "AWS/NetworkELB"
+#  metric_name               = "HealthyHostCount"
+#  period                    = 60
+#  evaluation_periods        = 1
+#  datapoints_to_alarm       = 1
+#  threshold                 = 2
+#  comparison_operator       = "LessThanThreshold"
+#  statistic                 = "Minimum"
+#  treat_missing_data        = "breaching"
+#  alarm_actions             = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+#  ok_actions                = [aws_sns_topic.alarm_critical.arn,aws_sns_topic.alarm_warning.arn]
+#  dimensions = {
+#    TargetGroup  = module.auto-scaling2.target_group_web_nlb_suffix
+#    LoadBalancer = module.auto-scaling2.nlb_web_nlb_suffix
+#  }
+#}
 
 resource "aws_cloudwatch_metric_alarm" "asg_mail_system_status_alarm" {
   alarm_name          = "asg-mail-system-status-check-alarm"
