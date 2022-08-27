@@ -1,4 +1,5 @@
 variable "prj_name" {}
+variable "asg_name" {}
 variable "ami_id" {}
 variable "instance_type" {}
 variable "instance_profile" {}
@@ -9,48 +10,8 @@ variable "public_subnet_ids" {}
 variable "private_subnet_ids" {}
 variable "user_data" {}
 
-#data "template_file" "web_user_data" {
-#  template = <<-EOF
-#    #!/bin/bash
-#    echo -n "checking git settings... "
-#    if [ ! -f /home/ec2-user/.gitconfig ]; then
-#      sudo -u ec2-user git config --global credential.helper '!aws codecommit credential-helper $@'
-#      sudo -u ec2-user git config --global credential.UseHttpPath true
-#      echo "not. initialized."
-#    fi
-#    echo "already set."
-#    echo -n "checking monitoring repository... "
-#    if [ -d /home/ec2-user/monitoring ]; then
-#      echo "found."
-#      echo -n "updating repository..."
-#      cd /home/ec2-user/monitoring
-#      sudo -u ec2-user git pull
-#      echo "updated"
-#    else
-#      echo "not found."
-#      echo -n "clone repository..."
-#      sudo -u ec2-user git clone https://git-codecommit.ap-northeast-1.amazonaws.com/v1/repos/monitoring /home/ec2-user/monitoring
-#      cd /home/ec2-user/monitoring
-#      echo "cloned"
-#    fi
-#    echo -n "updating collectd settiings..."
-#    sudo cp -f common/collectd.conf /etc/collectd.conf
-#    sudo cp -f common/collectd.d/* /etc/collectd.d/.
-#    sudo cp -f common/plugins/* /usr/lib64/collectd/.
-#    sudo cp -f web/collectd.d/* /etc/collectd.d/.
-#    sudo cp -f web/plugins/* /usr/lib64/collectd/.
-#    echo "done"
-#    echo -n "restarting collectd..."
-#    sudo systemctl restart collectd
-#    echo  "done."
-#    echo -n "updating & restarting cloudwatch agent..."
-#    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:AmazonCloudWatch-config-common
-#    sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a append-config -m ec2 -s -c ssm:AmazonCloudWatch-config-web
-#    echo  "done."
-#  EOF
-#}
 resource "aws_launch_template" "web" {
-  name                   = "${var.prj_name}-web-launch-template"
+  name                   = "${var.prj_name}-${var.asg_name}-launch-template"
   image_id               = var.ami_id
   instance_type          = var.instance_type
   vpc_security_group_ids = [var.private_sg_id]
@@ -69,7 +30,7 @@ resource "aws_launch_template" "web" {
 }
 
 resource "aws_autoscaling_group" "web" {
-  name_prefix               = "${var.prj_name}-web-asg-"
+  name_prefix               = "${var.prj_name}-${var.asg_name}-asg-"
   max_size                  = 2
   min_size                  = 2
   desired_capacity          = 2
@@ -99,35 +60,35 @@ resource "aws_autoscaling_group" "web" {
 
   tag {
     key   = "Name"
-    value = "${var.prj_name}-web-asg"
+    value = "${var.prj_name}-${var.asg_name}-asg"
     propagate_at_launch = true
   }
 }
 
 resource "aws_lb" "web-nlb" {
-  name               = "${var.prj_name}-web-alb"
+  name               = "${var.prj_name}-${var.asg_name}-alb"
   internal           = false
   load_balancer_type = "network"
   subnets            = var.public_subnet_ids 
 
   tags = {
-    Name = "${var.prj_name}-web-alb"
+    Name = "${var.prj_name}-${var.asg_name}-alb"
   }
 }
 
 resource "aws_lb" "web-nlb-internal" {
-  name               = "${var.prj_name}-web-alb-internal"
+  name               = "${var.prj_name}-${var.asg_name}-alb-internal"
   internal           = true
   load_balancer_type = "network"
   subnets            = var.private_subnet_ids 
 
   tags = {
-    Name = "${var.prj_name}-web-alb-internal"
+    Name = "${var.prj_name}-${var.asg_name}-alb-internal"
   }
 }
 resource "aws_lb_target_group" "web-nlb" {
   # https://thaim.hatenablog.jp/entry/2021/01/11/004738
-  name     = "${var.prj_name}-w-tgtgrp-${substr(uuid(), 0, 6)}"
+  name     = "${var.prj_name}-${var.asg_name}-tgtgrp-${substr(uuid(), 0, 6)}"
   port     = 8080
   protocol = "TCP"
   vpc_id   = var.vpc_id
@@ -148,7 +109,7 @@ resource "aws_lb_target_group" "web-nlb" {
 
 resource "aws_lb_target_group" "web-nlb-internal" {
   # https://thaim.hatenablog.jp/entry/2021/01/11/004738
-  name     = "${var.prj_name}-w-in-tgtgrp-${substr(uuid(), 0, 6)}"
+  name     = "${var.prj_name}-${var.asg_name}-in-tgtgrp-${substr(uuid(), 0, 6)}"
   port     = 8080
   protocol = "TCP"
   vpc_id   = var.vpc_id

@@ -88,13 +88,13 @@ resource "aws_iam_role_policy_attachment" "role_policy_attachment_eventbridge_st
 
 #----- alarm -----
 
-resource aws_sfn_state_machine step-function-create-ec2-alarms {
-  name     = "create-ec2-alarms"
+resource aws_sfn_state_machine step-function-create-ec2-alarms-web {
+  name     = "create-ec2-alarms-web"
   role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
 
   definition = <<-EOF
   {
-    "Comment": "create-ec2-alarms",
+    "Comment": "create-ec2-alarms-web",
     "StartAt": "Parallel",
     "States": {
       "Parallel": {
@@ -195,59 +195,6 @@ resource aws_sfn_state_machine step-function-create-ec2-alarms {
             }
           },
           {
-            "StartAt": "PutMetricAlarm_PROC_POSTFIX",
-            "States": {
-              "PutMetricAlarm_PROC_POSTFIX": {
-                "Type": "Task",
-                "End": true,
-                "Parameters": {
-                  "AlarmName.$": "States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
-                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
-                  "AlarmActions": [
-                    "${aws_sns_topic.alarm_critical.arn}",
-                    "${aws_sns_topic.alarm_warning.arn}"
-                  ],
-                  "OkActions": [
-                    "${aws_sns_topic.alarm_critical.arn}",
-                    "${aws_sns_topic.alarm_warning.arn}"
-                  ],
-                  "Namespace": "CWAgent",
-                  "MetricName": "procstat_lookup_pid_count",
-                  "Statistic": "Maximum",
-                  "Dimensions": [
-                    {
-                      "Name": "InstanceId",
-                      "Value.$": "$.detail.EC2InstanceId"
-                    },
-                    {
-                      "Name": "InstanceType",
-                      "Value": "t2.micro"
-                    },
-                    {
-                      "Name": "AutoScalingGroupName",
-                      "Value.$": "$.detail.AutoScalingGroupName"
-                    },
-                    {
-                      "Name": "exe",
-                      "Value": "/usr/libexec/postfix/master"
-                    },
-                    {
-                      "Name": "pid_finder",
-                      "Value": "native"
-                    }
-                  ],
-                  "Period": 300,
-                  "EvaluationPeriods": 1,
-                  "Threshold": 1,
-                  "DatapointsToAlarm": 1,
-                  "ComparisonOperator": "LessThanThreshold",
-                  "TreatMissingData": "breaching"
-                },
-                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
-              }
-            }
-          },
-          {
             "StartAt": "PutMetricAlarm_PROC_HTTPD",
             "States": {
               "PutMetricAlarm_PROC_HTTPD": {
@@ -299,6 +246,172 @@ resource aws_sfn_state_machine step-function-create-ec2-alarms {
                 "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
               }
             }
+          }
+        ],
+        "End": true
+      }
+    }
+  }
+  EOF
+}
+resource aws_sfn_state_machine step-function-create-ec2-alarms-mail {
+  name     = "create-ec2-alarms-mail"
+  role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
+
+  definition = <<-EOF
+  {
+    "Comment": "create-ec2-alarms-mail",
+    "StartAt": "Parallel",
+    "States": {
+      "Parallel": {
+        "Type": "Parallel",
+        "Branches": [
+          {
+            "StartAt": "PutMetricAlarm_CPU",
+            "States": {
+              "PutMetricAlarm_CPU": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-MAIL_CPU_UTILIZATION-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-MAIL_CPU_UTILIZATION-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "AWS/EC2",
+                  "MetricName": "CPUUtilization",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 80,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
+            }
+          },
+          {
+            "StartAt": "PutMetricAlarm_DISK",
+            "States": {
+              "PutMetricAlarm_DISK": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-MAIL_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-MAIL_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "disk_used_percent",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    },
+                    {
+                      "Name": "path",
+                      "Value": "/"
+                    },
+                    {
+                      "Name": "device",
+                      "Value": "xvda1"
+                    },
+                    {
+                      "Name": "fstype",
+                      "Value": "xfs"
+                    },
+                    {
+                      "Name": "InstanceType",
+                      "Value": "t2.micro"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 80,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
+            }
+          },
+          {
+            "StartAt": "PutMetricAlarm_PROC_POSTFIX",
+            "States": {
+              "PutMetricAlarm_PROC_POSTFIX": {
+                "Type": "Task",
+                "End": true,
+                "Parameters": {
+                  "AlarmName.$": "States.Format('${var.environ}-MAIL_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-MAIL_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId)",
+                  "AlarmActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "OkActions": [
+                    "${aws_sns_topic.alarm_critical.arn}",
+                    "${aws_sns_topic.alarm_warning.arn}"
+                  ],
+                  "Namespace": "CWAgent",
+                  "MetricName": "procstat_lookup_pid_count",
+                  "Statistic": "Maximum",
+                  "Dimensions": [
+                    {
+                      "Name": "InstanceId",
+                      "Value.$": "$.detail.EC2InstanceId"
+                    },
+                    {
+                      "Name": "InstanceType",
+                      "Value": "t2.micro"
+                    },
+                    {
+                      "Name": "AutoScalingGroupName",
+                      "Value.$": "$.detail.AutoScalingGroupName"
+                    },
+                    {
+                      "Name": "exe",
+                      "Value": "/usr/libexec/postfix/master"
+                    },
+                    {
+                      "Name": "pid_finder",
+                      "Value": "native"
+                    }
+                  ],
+                  "Period": 300,
+                  "EvaluationPeriods": 1,
+                  "Threshold": 1,
+                  "DatapointsToAlarm": 1,
+                  "ComparisonOperator": "LessThanThreshold",
+                  "TreatMissingData": "breaching"
+                },
+                "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricAlarm"
+              }
+            }
           },
           {
             "StartAt": "PutMetricAlarm_POSTFIX_QUEUE",
@@ -307,8 +420,8 @@ resource aws_sfn_state_machine step-function-create-ec2-alarms {
                 "Type": "Task",
                 "End": true,
                 "Parameters": {
-                  "AlarmName.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
-                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
+                  "AlarmName.$": "States.Format('${var.environ}-MAIL_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-MAIL_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId)",
                   "AlarmActions": [
                     "${aws_sns_topic.alarm_critical.arn}",
                     "${aws_sns_topic.alarm_warning.arn}"
@@ -348,8 +461,8 @@ resource aws_sfn_state_machine step-function-create-ec2-alarms {
                 "Type": "Task",
                 "End": true,
                 "Parameters": {
-                  "AlarmName.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-ALL{}', $.detail.EC2InstanceId)",
-                  "AlarmDescription.$": "States.Format('${var.environ}-WEB_POSTFIX_QUEUE-ALL{}', $.detail.EC2InstanceId)",
+                  "AlarmName.$": "States.Format('${var.environ}-MAIL_POSTFIX_QUEUE-ALL-{}', $.detail.EC2InstanceId)",
+                  "AlarmDescription.$": "States.Format('${var.environ}-MAIL_POSTFIX_QUEUE-ALL-{}', $.detail.EC2InstanceId)",
                   "AlarmActions": [
                     "${aws_sns_topic.alarm_critical.arn}",
                     "${aws_sns_topic.alarm_warning.arn}"
@@ -405,20 +518,20 @@ resource aws_sfn_state_machine step-function-create-ec2-alarms {
   }
   EOF
 }
-resource aws_sfn_state_machine step-function-delete-ec2-alarm-all {
-  name     = "delete-ec2-alarm-all"
+resource aws_sfn_state_machine step-function-delete-ec2-alarm-web {
+  name     = "delete-ec2-alarm-web"
   role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
 
   definition = <<-EOF
     {
-      "Comment": "delete-ec2-alarm-all",
+      "Comment": "delete-ec2-alarm-web",
       "StartAt": "DeleteAlarms",
       "States": {
         "DeleteAlarms": {
           "Type": "Task",
           "End": true,
           "Parameters": {
-            "AlarmNames.$": "States.Array(States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_POSTFIX-ALL{}', $.detail.EC2InstanceId),States.Format('${var.environ}-WEB_PROCESS_HTTPD-{}', $.detail.EC2InstanceId))"
+            "AlarmNames.$": "States.Array(States.Format('${var.environ}-WEB_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-WEB_PROCESS_HTTPD-{}', $.detail.EC2InstanceId))"
           },
           "Resource": "arn:aws:states:::aws-sdk:cloudwatch:deleteAlarms"
         }
@@ -427,33 +540,95 @@ resource aws_sfn_state_machine step-function-delete-ec2-alarm-all {
   EOF
 }
 
-resource aws_cloudwatch_event_rule eb-asg-ec2-launch-successful {
-  name = "eb_asg_ec2_launch_successful"
+resource aws_sfn_state_machine step-function-delete-ec2-alarm-mail {
+  name     = "delete-ec2-alarm-mail"
+  role_arn = aws_iam_role.stepfunctions_role_for_cloudwatch_alarm.arn
+
+  definition = <<-EOF
+    {
+      "Comment": "delete-ec2-alarm-mail",
+      "StartAt": "DeleteAlarms",
+      "States": {
+        "DeleteAlarms": {
+          "Type": "Task",
+          "End": true,
+          "Parameters": {
+            "AlarmNames.$": "States.Array(States.Format('${var.environ}-MAIL_CPU_UTILIZATION-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-MAIL_DISK_USED_PERCENT_ROOT-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-MAIL_POSTFIX_QUEUE-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-MAIL_PROCESS_POSTFIX-{}', $.detail.EC2InstanceId), States.Format('${var.environ}-MAIL_POSTFIX_QUEUE-ALL-{}', $.detail.EC2InstanceId))"
+          },
+          "Resource": "arn:aws:states:::aws-sdk:cloudwatch:deleteAlarms"
+        }
+      }
+    }
+  EOF
+}
+resource aws_cloudwatch_event_rule eb-asg-ec2-launch-successful-web {
+  name = "eb_asg_ec2_launch_successful_web"
   event_pattern = <<-EOF
   {
     "source": ["aws.autoscaling"],
-    "detail-type": ["EC2 Instance Launch Successful"]
+    "detail-type": ["EC2 Instance Launch Successful"],
+    "detail": {
+      "AutoScalingGroupName": ["${module.auto-scaling.auto_scaling_group_web}"]
+    }
   }
   EOF
 }
-resource aws_cloudwatch_event_target create-asg-alarms {
-  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful.name
-  arn      = aws_sfn_state_machine.step-function-create-ec2-alarms.arn
+resource aws_cloudwatch_event_rule eb-asg-ec2-launch-successful-mail {
+  name = "eb_asg_ec2_launch_successful_mail"
+  event_pattern = <<-EOF
+  {
+    "source": ["aws.autoscaling"],
+    "detail-type": ["EC2 Instance Launch Successful"],
+    "detail": {
+      "AutoScalingGroupName": ["${module.auto-scaling2.auto_scaling_group_web}"]
+    }
+  }
+  EOF
+}
+resource aws_cloudwatch_event_rule eb-asg-ec2-terminate-successful-web {
+  name = "eb_asg_ec2_terminate_successful_web"
+  event_pattern = <<-EOF
+  {
+    "source": ["aws.autoscaling"],
+    "detail-type": ["EC2 Instance Terminate Successful"],
+    "detail": {
+      "AutoScalingGroupName": ["${module.auto-scaling.auto_scaling_group_web}"]
+    }
+  }
+  EOF
+}
+resource aws_cloudwatch_event_rule eb-asg-ec2-terminate-successful-mail {
+  name = "eb_asg_ec2_terminate_successful_mail"
+  event_pattern = <<-EOF
+  {
+    "source": ["aws.autoscaling"],
+    "detail-type": ["EC2 Instance Terminate Successful"],
+    "detail": {
+      "AutoScalingGroupName": ["${module.auto-scaling2.auto_scaling_group_web}"]
+    }
+  }
+  EOF
+}
+resource aws_cloudwatch_event_target create-asg-alarms-web {
+  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful-web.name
+  arn      = aws_sfn_state_machine.step-function-create-ec2-alarms-web.arn
   role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
 }
 
-resource aws_cloudwatch_event_rule eb-asg-ec2-terminate-successful {
-  name = "eb_asg_ec2_terminate_successful"
-  event_pattern = <<-EOF
-  {
-    "source": ["aws.autoscaling"],
-    "detail-type": ["EC2 Instance Terminate Successful"]
-  }
-  EOF
+resource aws_cloudwatch_event_target create-asg-alarms-mail {
+  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-launch-successful-mail.name
+  arn      = aws_sfn_state_machine.step-function-create-ec2-alarms-mail.arn
+  role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
 }
 
-resource aws_cloudwatch_event_target eb-asg-ec2-terminate-successful {
-  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-terminate-successful.name
-  arn      = aws_sfn_state_machine.step-function-delete-ec2-alarm-all.arn
+resource aws_cloudwatch_event_target eb-asg-ec2-terminate-successful-web {
+  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-terminate-successful-web.name
+  arn      = aws_sfn_state_machine.step-function-delete-ec2-alarm-web.arn
+  role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
+}
+
+resource aws_cloudwatch_event_target eb-asg-ec2-terminate-successful-mail {
+  rule     = aws_cloudwatch_event_rule.eb-asg-ec2-terminate-successful-mail.name
+  arn      = aws_sfn_state_machine.step-function-delete-ec2-alarm-mail.arn
   role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
 }

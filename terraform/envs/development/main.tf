@@ -27,6 +27,7 @@ module "security-groups" {
 module "auto-scaling" {
   source   = "../../modules/auto-scaling"
   prj_name           = local.prj_name
+  asg_name           = "web"
   ami_id             = var.web_ami_id
   instance_type      = var.web_instance_type
   instance_profile   = module.ssm.ssm_instance_profile
@@ -36,4 +37,18 @@ module "auto-scaling" {
   public_subnet_ids  = module.vpc.public_subnet_ids
   private_subnet_ids = module.vpc.private_subnet_ids
   user_data          = var.web_user_data
+}
+module "auto-scaling2" {
+  source   = "../../modules/auto-scaling"
+  prj_name           = local.prj_name
+  asg_name           = "mail"
+  ami_id             = var.web_ami_id
+  instance_type      = var.web_instance_type
+  instance_profile   = module.ssm.ssm_instance_profile
+  vpc_id             = module.vpc.vpc_id
+  public_sg_id       = module.security-groups.public_sg_id
+  private_sg_id      = module.security-groups.private_sg_id
+  public_subnet_ids  = module.vpc.public_subnet_ids
+  private_subnet_ids = module.vpc.private_subnet_ids
+  user_data          = var.mail_user_data
 }

@@ -24,8 +24,8 @@ resource "aws_ssm_document" "test-df" {
 DOC
 }
 
-resource "aws_ssm_association" "test-df" {
-  association_name = "test-df"
+resource "aws_ssm_association" "test-df-web" {
+  association_name = "test-df-web"
   name = aws_ssm_document.test-df.name
   schedule_expression = "cron(0/30 * * * ? *)"
 
@@ -35,14 +35,30 @@ resource "aws_ssm_association" "test-df" {
   }
 }
 
-resource aws_cloudwatch_event_rule test_df {
-  name = "test_df"
+resource "aws_ssm_association" "test-df-mail" {
+  association_name = "test-df-mail"
+  name = aws_ssm_document.test-df.name
+  schedule_expression = "cron(0/30 * * * ? *)"
+
+  targets {
+    key    = "tag:Name"
+    values = ["my-sample-mail-asg"]
+  }
+}
+
+resource aws_cloudwatch_event_rule test_df_web {
+  name = "test_df_web"
   schedule_expression = "cron(0/5 * * * ? *)"
 }
 
-resource aws_cloudwatch_event_target test_df {
-  target_id = "test_df"
-  rule     = aws_cloudwatch_event_rule.test_df.name
+resource aws_cloudwatch_event_rule test_df_mail {
+  name = "test_df_mail"
+  schedule_expression = "cron(0/30 * * * ? *)"
+}
+
+resource aws_cloudwatch_event_target test_df_web {
+  target_id = "test_df_web"
+  rule     = aws_cloudwatch_event_rule.test_df_web.name
   role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
   arn = aws_ssm_document.test-df.arn
   run_command_targets {
@@ -52,14 +68,25 @@ resource aws_cloudwatch_event_target test_df {
 
 }
 
-resource "aws_ssm_document" "update_monitoring" {
-  name          = "update_monitorinng"
+resource aws_cloudwatch_event_target test_df_mail {
+  target_id = "test_df_mail"
+  rule     = aws_cloudwatch_event_rule.test_df_mail.name
+  role_arn = aws_iam_role.eventbridge-role-for-stepfunctions.arn
+  arn = aws_ssm_document.test-df.arn
+  run_command_targets {
+    key    = "tag:Name"
+    values = ["my-sample-mail-asg"]
+  }
+
+}
+resource "aws_ssm_document" "update_monitoring_web" {
+  name          = "update_monitoring_web"
   document_type = "Command"
 
   content = <<-DOC
   {
     "schemaVersion": "2.2",
-    "description": "update_monitoring",
+    "description": "update_monitoring_web",
     "parameters": {
     },
     "mainSteps": [
@@ -68,6 +95,29 @@ resource "aws_ssm_document" "update_monitoring" {
         "name": "runShellScript",
         "inputs": {
           "runCommand": ${jsonencode(split("\n", var.web_user_data))}
+        }
+      }
+    ]
+  }
+DOC
+}
+
+resource "aws_ssm_document" "update_monitoring_mail" {
+  name          = "update_monitoring_mail"
+  document_type = "Command"
+
+  content = <<-DOC
+  {
+    "schemaVersion": "2.2",
+    "description": "update_monitoring_mail",
+    "parameters": {
+    },
+    "mainSteps": [
+      {
+        "action": "aws:runShellScript",
+        "name": "runShellScript",
+        "inputs": {
+          "runCommand": ${jsonencode(split("\n", var.mail_user_data))}
         }
       }
     ]
